@@ -1,20 +1,23 @@
 import React, { useState } from "react";
-import { Wrench, Eye, EyeOff, User, Mail, Lock } from "lucide-react";
+import { Wrench, Eye, EyeOff, User, Mail, Lock, AlertCircle, CheckCircle, Loader } from "lucide-react";
+import axios from "axios";
 import Navbar from "../components/Navbar";
 
-export default function SignupPage({ onBack, onSignup, onSwitchToLogin }) {
+export default function SignupPage({ onBack, onSwitchToLogin }) {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     confirmPassword: "",
     department: "",
-    studentId: "",
+    rollnumber: "",
     role: "student"
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const departments = [
     "Computer Science & Engineering",
@@ -27,25 +30,53 @@ export default function SignupPage({ onBack, onSignup, onSwitchToLogin }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setSuccess("");
     
+    // Client-side validation
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords don't match!");
+      setError("Passwords do not match");
       return;
     }
-
+    
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+    
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      onSignup({
+    try {
+      const response = await axios.post("http://localhost:5000/api/user/signup", {
         name: formData.name,
         email: formData.email,
+        password: formData.password,
+        role: formData.role,
         department: formData.department,
-        studentId: formData.studentId,
-        role: formData.role === "teacher" ? "user" : "user" // Both teacher and student are regular users
+        rollnumber: formData.rollnumber,
       });
-    }, 1000);
+
+      if (response.status === 201 || response.status === 200) {
+        setSuccess("Account created successfully! Redirecting to login...");
+        setTimeout(() => {
+          onSwitchToLogin();
+        }, 2000);
+      }
+    } catch (error) {
+      console.error("Signup error:", error);
+      if (error.response) {
+        // Server responded with error status
+        setError(error.response.data.message || "Signup failed. Please try again.");
+      } else if (error.request) {
+        // Network error
+        setError("Network error. Please check your connection and try again.");
+      } else {
+        // Other error
+        setError("An unexpected error occurred. Please try again.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleChange = (e) => {
@@ -56,7 +87,24 @@ export default function SignupPage({ onBack, onSignup, onSwitchToLogin }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Background with animated elements */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-blue-700 to-purple-800">
+        {/* Animated background patterns */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-20 left-20 w-32 h-32 bg-white rounded-full animate-pulse"></div>
+          <div className="absolute top-40 right-32 w-24 h-24 bg-white rounded-full animate-pulse delay-1000"></div>
+          <div className="absolute bottom-32 left-40 w-20 h-20 bg-white rounded-full animate-pulse delay-2000"></div>
+          <div className="absolute bottom-20 right-20 w-28 h-28 bg-white rounded-full animate-pulse delay-500"></div>
+        </div>
+        
+        {/* Grid pattern overlay */}
+        <div className="absolute inset-0 opacity-5" style={{
+          backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
+          backgroundSize: '20px 20px'
+        }}></div>
+      </div>
+      
       <Navbar 
         isAuthenticated={false}
         onLogin={onSwitchToLogin}
@@ -64,10 +112,34 @@ export default function SignupPage({ onBack, onSignup, onSwitchToLogin }) {
         onHome={onBack}
       />
       
-      <div className="flex items-center justify-center px-4 py-8 sm:py-12">
-        <div className="max-w-md w-full">
+      <div className="relative z-10 flex items-center justify-center px-4 py-8 sm:py-12 min-h-screen">
+        <div className="flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-16 max-w-6xl w-full">
+          {/* Informative Content */}
+          <div className="lg:w-1/2 text-white text-center lg:text-left">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6 leading-tight">
+              Join <span className="text-yellow-300">MapiFix</span> Community
+            </h1>
+            <p className="text-lg sm:text-xl mb-8 text-blue-100 leading-relaxed">
+              Report campus maintenance issues, track their progress, and help create a better learning environment for everyone.
+            </p>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+                <Wrench className="w-8 h-8 text-yellow-300 mb-2" />
+                <h3 className="font-semibold mb-1">Quick Reporting</h3>
+                <p className="text-sm text-blue-100">Report issues instantly with photo uploads</p>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+                <CheckCircle className="w-8 h-8 text-green-300 mb-2" />
+                <h3 className="font-semibold mb-1">Real-time Tracking</h3>
+                <p className="text-sm text-blue-100">Track your reports from submission to resolution</p>
+              </div>
+            </div>
+          </div>
+          
           {/* Signup Card */}
-          <div className="bg-white/80 backdrop-blur-md rounded-xl sm:rounded-2xl shadow-xl p-6 sm:p-8 border border-white/50">
+          <div className="lg:w-1/2 max-w-md w-full">
+            <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl p-6 sm:p-8 border border-white/50">
           {/* Logo */}
           <div className="flex items-center justify-center space-x-3 mb-8">
             <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
@@ -83,11 +155,26 @@ export default function SignupPage({ onBack, onSignup, onSwitchToLogin }) {
             <p className="text-sm sm:text-base text-gray-600">Join MapiFix to report and track campus issues</p>
           </div>
 
+          {/* Error/Success Messages */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+              <span className="text-red-700 text-sm">{error}</span>
+            </div>
+          )}
+
+          {success && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center space-x-2">
+              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+              <span className="text-green-700 text-sm">{success}</span>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Full Name
+                Username
               </label>
               <div className="relative">
                 <User className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -97,7 +184,7 @@ export default function SignupPage({ onBack, onSignup, onSwitchToLogin }) {
                   value={formData.name}
                   onChange={handleChange}
                   className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50"
-                  placeholder="Enter your full name"
+                  placeholder="Enter a username"
                   required
                 />
               </div>
@@ -161,12 +248,12 @@ export default function SignupPage({ onBack, onSignup, onSwitchToLogin }) {
             {/* Student/Employee ID */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {formData.role === "student" ? "Student ID" : "Employee ID"}
+                {formData.role === "student" ? "Roll Number" : "Employee ID"}
               </label>
               <input
                 type="text"
-                name="studentId"
-                value={formData.studentId}
+                name="rollnumber"
+                value={formData.rollnumber}
                 onChange={handleChange}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50"
                 placeholder={formData.role === "student" ? "Enter your student ID" : "Enter your employee ID"}
@@ -230,9 +317,16 @@ export default function SignupPage({ onBack, onSignup, onSwitchToLogin }) {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed mt-6 flex items-center justify-center space-x-2"
             >
-              {isLoading ? "Creating Account..." : "Create Account"}
+              {isLoading ? (
+                <>
+                  <Loader className="w-5 h-5 animate-spin" />
+                  <span>Creating Account...</span>
+                </>
+              ) : (
+                <span>Create Account</span>
+              )}
             </button>
           </form>
 
@@ -248,9 +342,10 @@ export default function SignupPage({ onBack, onSignup, onSwitchToLogin }) {
               </button>
             </p>
           </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
     </div>
   );
 }

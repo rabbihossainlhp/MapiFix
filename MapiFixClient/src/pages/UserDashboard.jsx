@@ -53,7 +53,7 @@ export default function UserDashboard({ user, onLogout }) {
         return renderDashboardContent();
       case "new-report":
         return renderNewReportForm();
-      case "my-reports":
+      case "reports":
         return renderMyReports();
       case "profile":
         return renderProfile();
@@ -87,7 +87,15 @@ export default function UserDashboard({ user, onLogout }) {
 
       {/* Recent Reports */}
       <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl p-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">Recent Reports</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-gray-800">Recent Reports</h2>
+          <button
+            onClick={() => setActiveTab("reports")}
+            className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors"
+          >
+            View All →
+          </button>
+        </div>
         <div className="space-y-4">
           {userReports.slice(0, 3).map((report) => {
             const StatusIcon = statusConfig[report.status].icon;
@@ -107,6 +115,18 @@ export default function UserDashboard({ user, onLogout }) {
             );
           })}
         </div>
+        {userReports.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-gray-500 mb-4">No reports submitted yet</p>
+            <button
+              onClick={() => setActiveTab("new-report")}
+              className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Submit Your First Report</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -122,7 +142,7 @@ export default function UserDashboard({ user, onLogout }) {
         <form onSubmit={(e) => {
           e.preventDefault();
           console.log("Submitting report:", newReport);
-          setActiveTab("my-reports");
+          setActiveTab("reports");
           setNewReport({
             title: "",
             description: "",

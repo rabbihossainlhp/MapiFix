@@ -8,11 +8,13 @@ import {
   X,
   Mail,
   Calendar,
-  MapPin
+  MapPin,
+  Plus
 } from "lucide-react";
 
 const navigationItems = [
   { icon: BarChart3, label: "My Dashboard", id: "dashboard" },
+  { icon: Plus, label: "Submit Report", id: "new-report" },
   { icon: FileText, label: "My Reports", id: "reports" },
   { icon: User, label: "Profile", id: "profile" },
 ];

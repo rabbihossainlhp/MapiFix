@@ -96,7 +96,7 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout }) {
             className="lg:hidden fixed inset-0 bg-black/50 z-40"
             onClick={() => setIsMobileMenuOpen(false)}
           />
-          <div className="lg:hidden fixed left-0 top-16 bottom-0 w-3/5 sm:w-2/3 max-w-sm bg-gradient-to-b from-blue-600 to-purple-700 text-white shadow-2xl z-50">
+          <div className="lg:hidden fixed left-0 top-16 bottom-0 w-4/5 sm:w-2/3 max-w-sm bg-gradient-to-b from-blue-600 to-purple-700 text-white shadow-2xl z-50">
             <SidebarContent />
           </div>
         </>
