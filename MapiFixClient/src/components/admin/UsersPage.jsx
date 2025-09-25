@@ -1,39 +1,50 @@
 import React, { useState } from "react";
 import { Search, Filter, Eye, Edit, Trash2, Plus, Mail, Calendar, MapPin } from "lucide-react";
 
-// Dummy users data
-const dummyUsers = [
-  { id: 1, name: "John Doe", email: "john@example.com", department: "Computer Science", role: "student", reports: 5, joined: "2024-01-15", status: "active" },
-  { id: 2, name: "Jane Smith", email: "jane@example.com", department: "Electrical Engineering", role: "teacher", reports: 12, joined: "2024-01-10", status: "active" },
-  { id: 3, name: "Mike Johnson", email: "mike@example.com", department: "Civil Engineering", role: "student", reports: 3, joined: "2024-01-20", status: "inactive" },
-  { id: 4, name: "Sarah Wilson", email: "sarah@example.com", department: "Business Administration", role: "student", reports: 8, joined: "2024-01-12", status: "active" },
-];
-
-export default function UsersPage() {
+export default function UsersPage({ users = [], loading = false, onRefresh }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRole, setSelectedRole] = useState("all");
 
-  const filteredUsers = dummyUsers.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.department.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.department?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = selectedRole === "all" || user.role === selectedRole;
     return matchesSearch && matchesRole;
   });
 
   const stats = {
-    total: dummyUsers.length,
-    active: dummyUsers.filter(u => u.status === "active").length,
-    students: dummyUsers.filter(u => u.role === "student").length,
-    teachers: dummyUsers.filter(u => u.role === "teacher").length,
+    total: users.length,
+    active: users.filter(u => u.status === "active" || !u.status).length, // assume active if no status
+    students: users.filter(u => u.role === "student").length,
+    teachers: users.filter(u => u.role === "teacher").length,
   };
+
+  if (loading) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading users...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mb-1 sm:mb-2">Users Management</h1>
-        <p className="text-gray-600 text-sm sm:text-base">Manage all registered users in the system</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mb-1 sm:mb-2">Users Management</h1>
+          <p className="text-gray-600 text-sm sm:text-base">Manage all registered users in the system</p>
+        </div>
+        {onRefresh && (
+          <button
+            onClick={onRefresh}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+          >
+            Refresh
+          </button>
+        )}
       </div>
 
       {/* Stats Cards */}
@@ -100,8 +111,15 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+              {filteredUsers.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                    {users.length === 0 ? "No users found in the system" : "No users match your search criteria"}
+                  </td>
+                </tr>
+              ) : (
+                filteredUsers.map((user) => (
+                  <tr key={user._id || user.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-2 sm:px-3 lg:px-6 py-2 sm:py-3 lg:py-4">
                     <div className="flex items-center space-x-2 sm:space-x-3">
                       <div className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -150,7 +168,8 @@ export default function UsersPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>

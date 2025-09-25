@@ -8,7 +8,7 @@ const jwt = require("jsonwebtoken");
 
 exports.signupController = async (req, res, next) => {
     try {
-        const {name, email, password, role, department, rollnumber} = req.body;
+        const {username, email, password, role, department, rollnumber} = req.body;
         const exsistingUser = await User.findOne({email});
         if(exsistingUser){
             return res.status(400).json({
@@ -18,7 +18,7 @@ exports.signupController = async (req, res, next) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = new User({
-            name,
+            username,
             email,
             password: hashedPassword,
             role,
@@ -35,7 +35,7 @@ exports.signupController = async (req, res, next) => {
     }catch (error) {
         return res.status(500).json({
             message: "Server Error", 
-            error: error.message
+            error: error.message 
         });
     }
 }
@@ -77,7 +77,7 @@ exports.loginController = async (req, res, next) => {
 
 
 
-        
+
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if(!isPasswordValid){
             return res.status(400).json({

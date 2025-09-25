@@ -19,45 +19,53 @@ const priorityColor = (priority) => {
   return colors[priority] || "bg-gray-500";
 };
 
-// Extended dummy reports for All Reports page
-const allReports = [
-  { id: 1, title: "Light not working", location: "CSE 302", status: "open", date: "2024-01-15", priority: "high", reporter: "John Doe" },
-  { id: 2, title: "AC broken", location: "EEE 101", status: "in-progress", date: "2024-01-14", priority: "medium", reporter: "Jane Smith" },
-  { id: 3, title: "Leaking tap", location: "Civil Lab", status: "resolved", date: "2024-01-13", priority: "low", reporter: "Mike Johnson" },
-  { id: 4, title: "Broken chair", location: "Library", status: "open", date: "2024-01-16", priority: "medium", reporter: "Sarah Wilson" },
-  { id: 5, title: "Projector issue", location: "MBA 205", status: "in-progress", date: "2024-01-12", priority: "high", reporter: "Alice Brown" },
-  { id: 6, title: "WiFi not working", location: "CSE 201", status: "resolved", date: "2024-01-11", priority: "high", reporter: "Bob Davis" },
-  { id: 7, title: "Window broken", location: "Physics Lab", status: "open", date: "2024-01-17", priority: "medium", reporter: "Emma Wilson" },
-  { id: 8, title: "Printer jam", location: "Admin Office", status: "resolved", date: "2024-01-10", priority: "low", reporter: "Chris Lee" },
-];
-
-export default function AllReportsPage() {
+export default function AllReportsPage({ reports = [], loading = false, onRefresh }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
 
-  const filteredReports = allReports.filter(report => {
-    const matchesSearch = report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         report.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         report.reporter.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredReports = reports.filter(report => {
+    const matchesSearch = report.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         report.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         report.reporter?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         report.user?.name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || report.status === statusFilter;
     const matchesPriority = priorityFilter === "all" || report.priority === priorityFilter;
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
   const stats = {
-    total: allReports.length,
-    open: allReports.filter(r => r.status === "open").length,
-    inProgress: allReports.filter(r => r.status === "in-progress").length,
-    resolved: allReports.filter(r => r.status === "resolved").length,
+    total: reports.length,
+    open: reports.filter(r => r.status === "open").length,
+    inProgress: reports.filter(r => r.status === "in-progress").length,
+    resolved: reports.filter(r => r.status === "resolved").length,
   };
+
+  if (loading) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading reports...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">All Reports</h1>
-        <p className="text-gray-600">Manage and track all maintenance reports</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">All Reports</h1>
+          <p className="text-gray-600">Manage and track all maintenance reports</p>
+        </div>
+        {onRefresh && (
+          <button
+            onClick={onRefresh}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Refresh
+          </button>
+        )}
       </div>
 
       {/* Stats Cards */}
@@ -144,20 +152,27 @@ export default function AllReportsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredReports.map((report) => (
-                <tr key={report.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
-                    <div>
-                      <p className="font-medium text-gray-900 text-sm sm:text-base">{report.title}</p>
-                      <p className="text-xs sm:text-sm text-gray-500">ID: #{report.id}</p>
-                      <div className="md:hidden mt-1 text-xs text-gray-500">
-                        {report.reporter} • {report.location}
+              {filteredReports.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                    {reports.length === 0 ? "No reports found in the system" : "No reports match your search criteria"}
+                  </td>
+                </tr>
+              ) : (
+                filteredReports.map((report) => (
+                  <tr key={report._id || report.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
+                      <div>
+                        <p className="font-medium text-gray-900 text-sm sm:text-base">{report.title}</p>
+                        <p className="text-xs sm:text-sm text-gray-500">ID: #{report._id || report.id}</p>
+                        <div className="md:hidden mt-1 text-xs text-gray-500">
+                          {report.reporter || report.user?.name} • {report.location}
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="hidden md:table-cell px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
-                    <span className="text-gray-700 text-sm sm:text-base">{report.reporter}</span>
-                  </td>
+                    </td>
+                    <td className="hidden md:table-cell px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
+                      <span className="text-gray-700 text-sm sm:text-base">{report.reporter || report.user?.name}</span>
+                    </td>
                   <td className="hidden lg:table-cell px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
                     <span className="text-gray-700 text-sm sm:text-base">{report.location}</span>
                   </td>
@@ -187,7 +202,8 @@ export default function AllReportsPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -1,6 +1,7 @@
 //dependencies
 const authRouter = require('./authRoutes');
 const reportRouter = require('./reportRoutes');
+const userRouter = require('./userRoutes');
 
 
 
@@ -13,6 +14,10 @@ const Router_array = [
     {
         path: '/api/report',
         handler: reportRouter
+    },
+    {
+        path: '/api/alluser',
+        handler: userRouter
     }
 
 ];

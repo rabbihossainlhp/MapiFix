@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { getAllReports, getAllUsers } from "./services/apiService";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/admin/Sidebar";
 import Header from "./components/admin/Header";
@@ -9,30 +10,94 @@ import UsersPage from "./components/admin/UsersPage";
 import AllReportsPage from "./components/admin/AllReportsPage";
 import SettingsPage from "./components/admin/SettingsPage";
 
-// Dummy data
-const dummyReports = [
-  { id: 1, title: "Light not working", location: "CSE 302", status: "open", date: "2024-01-15" },
-  { id: 2, title: "AC broken", location: "EEE 101", status: "in-progress", date: "2024-01-14" },
-  { id: 3, title: "Leaking tap", location: "Civil Lab", status: "resolved", date: "2024-01-13" },
-];
-
 export default function AdminPanelUI({ user, onLogout }) {
+  // Debug: Check if functions are imported correctly
+  console.log('getAllReports function:', typeof getAllReports);
+  console.log('getAllUsers function:', typeof getAllUsers);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // Real data from backend
+  const [allReports, setAllReports] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const filteredReports = dummyReports.filter(report =>
+  // Fetch all data on component mount
+  useEffect(() => {
+    fetchAllData();
+  }, []);
+
+  const fetchAllData = async () => {
+    setLoading(true);
+    setError("");
+    
+    try {
+      console.log('Starting to fetch admin data...');
+      
+      // Fetch both reports and users in parallel
+      const [reportsResponse, usersResponse] = await Promise.all([
+        getAllReports(),
+        getAllUsers()
+      ]);
+      
+      console.log('Reports response:', reportsResponse);
+      console.log('Users response:', usersResponse);
+      
+      setAllReports(reportsResponse.reports || []);
+      setAllUsers(usersResponse.users || []);
+      setError("");
+      
+      console.log('Data successfully loaded');
+    } catch (error) {
+      console.error('Error fetching admin data:', error);
+      console.error('Error details:', error.message);
+      setError(`Failed to load admin data: ${error.message}`);
+      // Keep empty arrays as fallback
+      setAllReports([]);
+      setAllUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredReports = allReports.filter(report =>
     report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     report.location.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const stats = {
-    open: dummyReports.filter(r => r.status === "open").length,
-    inProgress: dummyReports.filter(r => r.status === "in-progress").length,
-    resolved: dummyReports.filter(r => r.status === "resolved").length,
-    total: dummyReports.length
+    open: allReports.filter(r => r.status === "open").length,
+    inProgress: allReports.filter(r => r.status === "in-progress").length,
+    resolved: allReports.filter(r => r.status === "resolved").length,
+    total: allReports.length,
+    totalUsers: allUsers.length
   };
 
   const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading admin data...</p>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
+          <p className="text-red-700 mb-4">{error}</p>
+          <button 
+            onClick={fetchAllData}
+            className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Retry Loading Data
+          </button>
+        </div>
+      );
+    }
+
     switch (activeTab) {
       case "dashboard":
         return <DashboardPage 
@@ -40,12 +105,23 @@ export default function AdminPanelUI({ user, onLogout }) {
           searchTerm={searchTerm} 
           setSearchTerm={setSearchTerm} 
           stats={stats} 
-          filteredReports={filteredReports} 
+          filteredReports={filteredReports}
+          allReports={allReports}
+          loading={loading}
+          onRefresh={fetchAllData}
         />;
       case "users":
-        return <UsersPage />;
+        return <UsersPage 
+          users={allUsers}
+          loading={loading}
+          onRefresh={fetchAllData}
+        />;
       case "reports":
-        return <AllReportsPage />;
+        return <AllReportsPage 
+          reports={allReports}
+          loading={loading}
+          onRefresh={fetchAllData}
+        />;
       case "settings":
         return <SettingsPage />;
       default:

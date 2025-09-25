@@ -59,10 +59,20 @@ class ApiService {
 
   async getAllReports() {
     try {
-      const response = await this.api.get('/report/all');
+      const response = await this.api.get('/report/allreports');
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Failed to fetch reports');
+    }
+  }
+
+  // Admin specific methods
+  async getAllUsers() {
+    try {
+      const response = await this.api.get('/alluser');
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch users');
     }
   }
 }
@@ -75,5 +85,6 @@ export const login = (email, password) => apiService.login(email, password);
 export const signup = (userData) => apiService.signup(userData);
 export const getUserReports = () => apiService.getUserReports();
 export const getAllReports = () => apiService.getAllReports();
+export const getAllUsers = () => apiService.getAllUsers();
 
 export default apiService;

@@ -57,3 +57,25 @@ exports.getUserReportsController = async (req, res, next) => {
         });
     }
 }
+
+
+
+
+
+exports.getAllReportsController = async (req, res, next) => {
+    try{
+        const reports = await Report.find().populate('reporter', 'username email');
+        return res.status(200).json({
+            message: "All reports fetched successfully",
+            reports
+        });
+
+
+    }catch(err){
+        return res.status(500).json({
+            message: "Server Error",
+            error: err.message
+        });
+    }
+
+}   
