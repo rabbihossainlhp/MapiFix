@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Homepage from "./pages/Homepage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
@@ -9,8 +9,42 @@ function App() {
   const [currentView, setCurrentView] = useState("home"); // "home", "login", "signup", "user-dashboard", "admin-dashboard"
   const [user, setUser] = useState(null); // Current logged in user
 
+  // Restore authentication state on app load
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    const userData = localStorage.getItem('userData');
+    
+    if (token && userData) {
+      try {
+        const parsedUserData = JSON.parse(userData);
+        setUser({
+          ...parsedUserData,
+          token: token
+        });
+        
+        // Set appropriate view based on user role
+        if (parsedUserData.role === "admin") {
+          setCurrentView("admin-dashboard");
+        } else {
+          setCurrentView("user-dashboard");
+        }
+        
+        console.log('Restored authentication state:', parsedUserData);
+      } catch (error) {
+        console.error('Error restoring authentication state:', error);
+        // Clear corrupted data
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userData');
+      }
+    }
+  }, []);
+
   const handleLogin = (userData) => {
     setUser(userData);
+    
+    // Store user data in localStorage for persistence
+    localStorage.setItem('userData', JSON.stringify(userData));
+    
     if (userData.role === "admin") {
       setCurrentView("admin-dashboard");
     } else {
@@ -26,9 +60,11 @@ function App() {
   const handleLogout = () => {
     setUser(null);
     setCurrentView("home");
-  };
-
-  const handleBackToHome = () => {
+    // Clear all authentication data when logging out
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userData');
+    console.log('Logged out and cleared authentication data');
+  };  const handleBackToHome = () => {
     setCurrentView("home");
   };
 

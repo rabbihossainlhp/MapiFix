@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Wrench, Eye, EyeOff, Mail, Lock, AlertCircle, CheckCircle, Loader, Shield, Users } from "lucide-react";
-import axios from "axios";
+import { login } from "../services/apiService";
 import Navbar from "../components/Navbar";
 
 export default function LoginPage({ onBack, onLogin, onSwitchToSignup }) {
@@ -27,22 +27,48 @@ export default function LoginPage({ onBack, onLogin, onSwitchToSignup }) {
     setIsLoading(true);
     
     try {
-      const response = await axios.post("http://localhost:5000/api/user/login", {
-        email: formData.email,
-        password: formData.password,
-      });
-
-      if (response.status === 200) {
-        setSuccess("Login successful! Redirecting...");
-        setTimeout(() => {
-          onLogin({
-            email: formData.email,
-            name: response.data.user.name,
-            role: response.data.user.role,
-            token: response.data.token
-          });
-        }, 1000);
+      const response = await login(formData.email, formData.password);
+      
+      console.log('Login response:', response);
+      console.log('User object:', response.user);
+      console.log('User role from response:', response.user.role);
+      setSuccess("Login successful! Redirecting...");
+      
+      // Store token in localStorage for persistence
+      localStorage.setItem('authToken', response.token);
+      
+      // Determine user role - decode JWT token to get the actual role
+      let userRole = response.user.role;
+      
+      // If role is not set in user object, decode JWT token to get role
+      if (!userRole) {
+        try {
+          const tokenPayload = JSON.parse(atob(response.token.split('.')[1]));
+          userRole = tokenPayload.role;
+          console.log('Role extracted from JWT token:', userRole);
+        } catch (error) {
+          console.error('Error decoding token:', error);
+          userRole = 'student'; // default fallback
+        }
       }
+      
+      // Create user data with correct role
+      const userData = {
+        ...response.user,
+        role: userRole
+      };
+      
+      localStorage.setItem('userData', JSON.stringify(userData));
+      
+      setTimeout(() => {
+        onLogin({
+          email: formData.email,
+          name: response.user.name || response.user.username,
+          role: userRole,
+          token: response.token,
+          _id: response.user._id
+        });
+      }, 1000);
     } catch (error) {
       console.error("Login error:", error);
       if (error.response) {

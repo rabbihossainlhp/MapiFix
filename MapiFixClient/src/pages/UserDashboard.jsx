@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Plus, 
   Search, 
@@ -12,17 +12,12 @@ import {
   AlertCircle,
   CheckCircle2,
   Settings,
-  X
+  X,
+  Loader
 } from "lucide-react";
+import { createReport, getUserReports } from "../services/apiService";
 import Navbar from "../components/Navbar";
 import UserSidebar from "../components/user/UserSidebar";
-
-// Dummy user reports data
-const userReports = [
-  { id: 1, title: "Broken projector in MBA 205", location: "MBA 205", status: "in-progress", date: "2024-01-16", priority: "high", description: "The projector is not turning on", image: null },
-  { id: 2, title: "Leaking tap in washroom", location: "Library Block", status: "resolved", date: "2024-01-14", priority: "medium", description: "Water leaking from the tap", image: null },
-  { id: 3, title: "WiFi not working", location: "CSE 302", status: "open", date: "2024-01-15", priority: "low", description: "No internet connectivity in the classroom", image: null },
-];
 
 const statusConfig = {
   "open": { color: "bg-red-100 text-red-800 border-red-200", icon: AlertCircle },
@@ -39,13 +34,118 @@ export default function UserDashboard({ user, onLogout }) {
     priority: "medium",
     image: null
   });
-
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // Real reports from backend
+  const [userReports, setUserReports] = useState([]);
+  const [reportsLoading, setReportsLoading] = useState(false);
+
+  // Fetch user reports on component mount
+  useEffect(() => {
+    fetchUserReports();
+  }, []);
+
+  const fetchUserReports = async () => {
+    setReportsLoading(true);
+    try {
+      const response = await getUserReports();
+      setUserReports(response.reports || []);
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+      // Keep empty array if fetch fails
+      setUserReports([]);
+    } finally {
+      setReportsLoading(false);
+    }
+  };
 
   const filteredReports = userReports.filter(report =>
     report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     report.location.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+    
+    if(!newReport.title || !newReport.description || !newReport.location) {
+      setError('Please fill in all required fields');
+      return;
+    }
+    
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    
+    try {
+      // Create FormData for file upload - matching your backend exactly
+      const formData = new FormData();
+      formData.append('title', newReport.title);
+      formData.append('description', newReport.description);
+      formData.append('location', newReport.location);
+      formData.append('priority', newReport.priority);
+      formData.append('status', 'open');
+      formData.append('reporter', 'user'); // Required by backend validation
+      
+      // Add image file with exact field name your backend expects
+      if (newReport.image) {
+        formData.append('reportImage', newReport.image);
+        console.log('Image file details:', {
+          name: newReport.image.name,
+          size: newReport.image.size,
+          type: newReport.image.type
+        });
+      }
+      
+      // Debug what we're sending to your backend
+      console.log('Sending to backend:', {
+        url: 'http://localhost:5000/api/report/create',
+        method: 'POST',
+        hasImage: !!newReport.image,
+        formDataFields: Array.from(formData.keys())
+      });
+      
+      const response = await createReport(formData);
+      
+      if (response.success) {
+        setSuccess('Report submitted successfully!');
+        
+        // Reset form
+        setNewReport({
+          title: "",
+          description: "",
+          location: "",
+          priority: "medium",
+          image: null
+        });
+        
+        // Clear file input
+        const fileInput = document.getElementById('image-upload');
+        if (fileInput) {
+          fileInput.value = '';
+        }
+        
+        // Refresh reports list
+        await fetchUserReports();
+        
+        // Switch to reports tab after 2 seconds
+        setTimeout(() => {
+          setActiveTab("reports");
+          setSuccess('');
+        }, 2000);
+      } else {
+        setError(response.message || 'Failed to submit report');
+      }
+    } catch (error) {
+      setError(error.message || 'An error occurred while submitting the report');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
 
   const renderContent = () => {
     switch (activeTab) {
@@ -96,26 +196,36 @@ export default function UserDashboard({ user, onLogout }) {
             View All →
           </button>
         </div>
-        <div className="space-y-4">
-          {userReports.slice(0, 3).map((report) => {
-            const StatusIcon = statusConfig[report.status].icon;
-            return (
-              <div key={report.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                <div className="flex items-center space-x-4">
-                  <StatusIcon className="w-6 h-6 text-gray-500" />
-                  <div>
-                    <h3 className="font-medium text-gray-900">{report.title}</h3>
-                    <p className="text-sm text-gray-600">{report.location} • {report.date}</p>
+        {reportsLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader className="w-6 h-6 animate-spin text-blue-600" />
+            <span className="ml-2 text-gray-600">Loading reports...</span>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {userReports.slice(0, 3).map((report) => {
+              const StatusIcon = statusConfig[report.status]?.icon || AlertCircle;
+              return (
+                <div key={report._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                  <div className="flex items-center space-x-4">
+                    <StatusIcon className="w-6 h-6 text-gray-500" />
+                    <div>
+                      <h3 className="font-medium text-gray-900">{report.title}</h3>
+                      <p className="text-sm text-gray-600">
+                        {report.location} • {new Date(report.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium border ${statusConfig[report.status]?.color || 'bg-gray-100 text-gray-800'}`}>
+                    {report.status.replace("-", " ")}
+                  </span>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-sm font-medium border ${statusConfig[report.status].color}`}>
-                  {report.status.replace("-", " ")}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-        {userReports.length === 0 && (
+              );
+            })}
+          </div>
+        )}
+        
+        {userReports.length === 0 && !reportsLoading && (
           <div className="text-center py-8">
             <p className="text-gray-500 mb-4">No reports submitted yet</p>
             <button
@@ -139,18 +249,22 @@ export default function UserDashboard({ user, onLogout }) {
       </div>
 
       <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl p-6">
-        <form onSubmit={(e) => {
-          e.preventDefault();
-          console.log("Submitting report:", newReport);
-          setActiveTab("reports");
-          setNewReport({
-            title: "",
-            description: "",
-            location: "",
-            priority: "medium",
-            image: null
-          });
-        }}>
+        {/* Error/Success Messages */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
+            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+            <span className="text-red-700 text-sm">{error}</span>
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center space-x-2">
+            <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+            <span className="text-green-700 text-sm">{success}</span>
+          </div>
+        )}
+
+        <form id="reportForm" onSubmit={handleFormSubmit}>
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Issue Title</label>
@@ -234,9 +348,17 @@ export default function UserDashboard({ user, onLogout }) {
               </button>
               <button
                 type="submit"
-                className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
+                disabled={loading}
+                className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
               >
-                Submit Report
+                {loading ? (
+                  <>
+                    <Loader className="w-5 h-5 animate-spin" />
+                    <span>Submitting...</span>
+                  </>
+                ) : (
+                  <span>Submit Report</span>
+                )}
               </button>
             </div>
           </div>
@@ -283,33 +405,39 @@ export default function UserDashboard({ user, onLogout }) {
           </button>
         </div>
 
-        <div className="space-y-4">
-          {filteredReports.map((report) => {
-            const StatusIcon = statusConfig[report.status].icon;
-            return (
-              <div key={report.id} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <StatusIcon className="w-6 h-6 text-gray-500" />
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{report.title}</h3>
-                      <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
-                        <div className="flex items-center space-x-1">
-                          <MapPin className="w-4 h-4" />
-                          <span>{report.location}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Clock className="w-4 h-4" />
-                          <span>{report.date}</span>
+        {reportsLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader className="w-8 h-8 animate-spin text-blue-600" />
+            <span className="ml-3 text-gray-600">Loading your reports...</span>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredReports.map((report) => {
+              const StatusIcon = statusConfig[report.status]?.icon || AlertCircle;
+              return (
+                <div key={report._id} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      <StatusIcon className="w-6 h-6 text-gray-500" />
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{report.title}</h3>
+                        <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
+                          <div className="flex items-center space-x-1">
+                            <MapPin className="w-4 h-4" />
+                            <span>{report.location}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Clock className="w-4 h-4" />
+                            <span>{new Date(report.createdAt).toLocaleDateString()}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-3 mt-3 sm:mt-0">
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium border ${statusConfig[report.status].color}`}>
-                      {report.status === "in-progress" ? "In Progress" : report.status.charAt(0).toUpperCase() + report.status.slice(1)}
-                    </span>
-                  </div>
+                    <div className="flex items-center space-x-3 mt-3 sm:mt-0">
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium border ${statusConfig[report.status]?.color || 'bg-gray-100 text-gray-800'}`}>
+                        {report.status === "in-progress" ? "In Progress" : report.status.charAt(0).toUpperCase() + report.status.slice(1)}
+                      </span>
+                    </div>
                 </div>
                 
                 {report.description && (
@@ -330,7 +458,21 @@ export default function UserDashboard({ user, onLogout }) {
               </div>
             );
           })}
+          
+          {filteredReports.length === 0 && !reportsLoading && (
+            <div className="text-center py-12">
+              <p className="text-gray-500 mb-4">No reports found</p>
+              <button
+                onClick={() => setActiveTab("new-report")}
+                className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Your First Report</span>
+              </button>
+            </div>
+          )}
         </div>
+        )}
       </div>
     </div>
   );
