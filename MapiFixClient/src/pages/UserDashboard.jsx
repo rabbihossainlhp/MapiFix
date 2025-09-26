@@ -251,9 +251,8 @@ export default function UserDashboard({ user, onLogout }) {
         });
       }
       
-      // Debug what we're sending to your backend
+      // Debug what we're sending to the backend
       console.log('Sending to backend:', {
-        url: 'http://localhost:5000/api/report/create',
         method: 'POST',
         hasImage: !!newReport.image,
         formDataFields: Array.from(formData.keys())

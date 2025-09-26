@@ -3,6 +3,9 @@ import { Wrench, Eye, EyeOff, User, Mail, Lock, AlertCircle, CheckCircle, Loader
 import axios from "axios";
 import Navbar from "../components/Navbar";
 
+// API Configuration
+const API_BASE_URL = 'https://mapifix.onrender.com/api';
+
 export default function SignupPage({ onBack, onSwitchToLogin }) {
   const [formData, setFormData] = useState({
     name: "",
@@ -47,7 +50,7 @@ export default function SignupPage({ onBack, onSwitchToLogin }) {
     setIsLoading(true);
     
     try {
-      const response = await axios.post("http://localhost:5000/api/user/signup", {
+      const response = await axios.post(`${API_BASE_URL}/user/signup`, {
         username: formData.name,
         email: formData.email,
         password: formData.password,
