@@ -48,7 +48,7 @@ export default function SignupPage({ onBack, onSwitchToLogin }) {
     
     try {
       const response = await axios.post("http://localhost:5000/api/user/signup", {
-        username: formData.username,
+        username: formData.name,
         email: formData.email,
         password: formData.password,
         role: formData.role,
@@ -60,7 +60,7 @@ export default function SignupPage({ onBack, onSwitchToLogin }) {
         setSuccess("Account created successfully! Redirecting to login...");
         setTimeout(() => {
           onSwitchToLogin();
-        }, 2000);
+        }, 1000);
       }
     } catch (error) {
       console.error("Signup error:", error);
@@ -180,8 +180,8 @@ export default function SignupPage({ onBack, onSwitchToLogin }) {
                 <User className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
-                  name="username"
-                  value={formData.user}
+                  name="name"
+                  value={formData.name}
                   onChange={handleChange}
                   className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50"
                   placeholder="Enter a username"

@@ -307,6 +307,8 @@ export default function UserDashboard({ user, onLogout }) {
         return renderNewReportForm();
       case "reports":
         return renderMyReports();
+      case "all-reports":
+        return renderAllReports();
       case "profile":
         return renderProfile();
       default:
@@ -464,8 +466,90 @@ export default function UserDashboard({ user, onLogout }) {
         )}
         
         {allReports.length > 10 && (
-          <div className="text-center mt-4 pt-4 border-t border-gray-200">
-            <p className="text-sm text-gray-500">Showing 10 of {allReports.length} community reports</p>
+          <div className="text-center mt-6 pt-4 border-t border-gray-200">
+            <p className="text-sm text-gray-500 mb-4">Showing 10 of {allReports.length} community reports</p>
+            <button
+              onClick={() => setActiveTab("all-reports")}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-xl hover:shadow-lg transition-all duration-300 font-medium"
+            >
+              View All Community Reports ({allReports.length})
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderAllReports = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">All Community Reports</h1>
+          <p className="text-gray-600">Browse all maintenance reports from the community</p>
+        </div>
+        <button
+          onClick={() => setActiveTab("dashboard")}
+          className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-xl transition-colors font-medium"
+        >
+          Back to Dashboard
+        </button>
+      </div>
+
+      <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-gray-800">All Reports ({allReports.length})</h2>
+          <div className="flex items-center space-x-4">
+            <div className="text-sm text-gray-500">
+              {allReportsLoading ? "Loading..." : `${allReports.length} reports found`}
+            </div>
+          </div>
+        </div>
+        
+        {allReportsLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader className="w-8 h-8 animate-spin text-blue-600" />
+            <span className="ml-3 text-gray-600">Loading all community reports...</span>
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {allReports.map((report) => {
+              const StatusIcon = statusConfig[report.status]?.icon || AlertCircle;
+              return (
+                <div 
+                  key={report._id} 
+                  className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl hover:from-blue-100 hover:to-indigo-100 transition-all duration-300 cursor-pointer border border-blue-100 hover:border-blue-200"
+                  onClick={() => handleReportClick(report._id)}
+                >
+                  <div className="flex items-center space-x-4 flex-1">
+                    <StatusIcon className="w-6 h-6 text-gray-500 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 truncate">{report.title}</h3>
+                      <p className="text-sm text-gray-600 truncate">
+                        📍 {report.location} • 👤 {report.reporter?.username || 'Anonymous'}
+                      </p>
+                      <div className="flex items-center space-x-4 text-xs text-gray-500 mt-2">
+                        <span>📅 {new Date(report.createdAt).toLocaleDateString()}</span>
+                        <span>🚩 <span className="capitalize">{report.priority}</span> Priority</span>
+                        {report.department && <span>🏢 {report.department}</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium border whitespace-nowrap ${statusConfig[report.status]?.color || 'bg-gray-100 text-gray-800'}`}>
+                      {report.status.replace("-", " ")}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        
+        {allReports.length === 0 && !allReportsLoading && (
+          <div className="text-center py-12">
+            <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500 text-lg">No community reports available</p>
+            <p className="text-gray-400 text-sm">Be the first to report an issue!</p>
           </div>
         )}
       </div>

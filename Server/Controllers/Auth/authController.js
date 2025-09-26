@@ -22,7 +22,7 @@ exports.signupController = async (req, res, next) => {
             email,
             password: hashedPassword,
             role,
-            department: role === 'teacher' ? department : undefined,
+            department,
             rollnumber: role === 'student' ? rollnumber : undefined,
         })
 

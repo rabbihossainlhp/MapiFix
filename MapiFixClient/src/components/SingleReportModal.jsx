@@ -1,5 +1,5 @@
 // Single Report Modal/Page Component
-import React, { useState, useEffect } from 'react';
+import React, { useState, } from 'react';
 import { 
   X, 
   MapPin, 
@@ -59,8 +59,8 @@ export default function SingleReportModal({ report, isOpen, onClose, isAdmin = f
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-      <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-gradient-to-br from-blue-900/80 via-indigo-900/80 to-purple-900/80 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white/95 backdrop-blur-md rounded-xl sm:rounded-2xl shadow-2xl border border-white/20 max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className={`${statusStyle.bgColor} px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200`}>
           <div className="flex items-center justify-between">
