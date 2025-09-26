@@ -3,7 +3,8 @@ const {
     createReportController, 
     getUserReportsController,
     getAllReportsController,
-    updateReportStatusController
+    updateReportStatusController,
+    getSingleReportController
 } = require('../Controllers/reportController');
 const upload = require('../Middlewares/uploadMiddleware');
 const {authMiddleware} = require('../Middlewares/authMiddleware');
@@ -14,6 +15,6 @@ router.post('/create', authMiddleware, upload.single('reportImage'), createRepor
 router.post('/updatestatus/:reportId', authMiddleware, updateReportStatusController)
 router.get('/user-reports', authMiddleware, getUserReportsController);
 router.get('/allreports', authMiddleware, getAllReportsController);
-
+router.get('/single/:reportId', authMiddleware, getSingleReportController);
 
 module.exports = router;

@@ -4,7 +4,7 @@ const User = require('../Models/User');
 
 exports.createReportController = async (req, res, next) => {        
     const {title, description, status, priority, location, reporter} = req.body;
-    const reportImage = req.file? req.file.path : 'example.jpg';
+    const reportImage = req.file? req.file.path : 'https://png.pngtree.com/png-vector/20191004/ourmid/pngtree-alert-icon-isolated-on-abstract-background-png-image_1779868.jpg';
     try{
 
         if(!title || !status || !priority ||  !reporter){
@@ -111,6 +111,36 @@ exports.updateReportStatusController = async (req, res, next) => {
 
         return res.status(200).json({
             message: "Report status updated successfully",
+            report
+        });
+
+        
+    }catch(err){
+        return res.status(500).json({
+            message: "Server Error",
+            error: err.message
+        });
+    }
+}
+
+
+
+
+
+
+exports.getSingleReportController = async (req, res, next) => {
+    const {reportId} = req.params;
+    try{
+        const report = await Report.findById(reportId)
+            .populate('reporter', 'username email');
+        if(!report){
+            return res.status(404).json({
+                message: "Report not found"
+            });
+        }
+
+        return res.status(200).json({
+            message: "Report fetched successfully",
             report
         });
 

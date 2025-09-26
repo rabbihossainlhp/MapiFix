@@ -114,6 +114,24 @@ class ApiService {
       throw new Error(error.response?.data?.message || 'Failed to update report status');
     }
   }
+
+  // Get single report details
+  async getSingleReport(reportId) {
+    try {
+      const url = `/report/single/${reportId}`;
+      console.log('Fetching single report with ID:', reportId);
+      console.log('Full URL will be:', `${API_BASE_URL}${url}`);
+      const response = await this.api.get(url);
+      console.log('Single report API response:', response);
+      return response.data;
+    } catch (error) {
+      console.error('Single report API error:', error);
+      console.error('Error response data:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      console.error('Error statusText:', error.response?.statusText);
+      throw new Error(error.response?.data?.message || 'Failed to fetch report details');
+    }
+  }
 }
 
 const apiService = new ApiService();
@@ -126,5 +144,6 @@ export const getUserReports = () => apiService.getUserReports();
 export const getAllReports = () => apiService.getAllReports();
 export const getAllUsers = () => apiService.getAllUsers();
 export const updateReportStatus = (reportId, status) => apiService.updateReportStatus(reportId, status);
+export const getSingleReport = (reportId) => apiService.getSingleReport(reportId);
 
 export default apiService;

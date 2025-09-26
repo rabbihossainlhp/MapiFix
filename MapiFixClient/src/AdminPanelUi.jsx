@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getAllReports, getAllUsers } from "./services/apiService";
+import { getAllReports, getAllUsers, getSingleReport, updateReportStatus } from "./services/apiService";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/admin/Sidebar";
 import Header from "./components/admin/Header";
@@ -9,6 +9,7 @@ import DashboardPage from "./components/admin/DashboardPage";
 import UsersPage from "./components/admin/UsersPage";
 import AllReportsPage from "./components/admin/AllReportsPage";
 import SettingsPage from "./components/admin/SettingsPage";
+import SingleReportModal from "./components/SingleReportModal";
 
 export default function AdminPanelUI({ user, onLogout }) {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -19,6 +20,10 @@ export default function AdminPanelUI({ user, onLogout }) {
   const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Single report modal state
+  const [selectedReport, setSelectedReport] = useState(null);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   // Fetch all data on component mount
   useEffect(() => {
@@ -48,6 +53,67 @@ export default function AdminPanelUI({ user, onLogout }) {
       setAllUsers([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle report click to open modal
+  const handleReportClick = async (reportId) => {
+    try {
+      setShowReportModal(true);
+      
+      console.log('Admin clicking on report with ID:', reportId);
+      const response = await getSingleReport(reportId);
+      console.log('Single report response structure:', response);
+      console.log('Available keys in response:', Object.keys(response || {}));
+      
+      // Handle different possible response structures
+      let reportData = null;
+      if (response?.report) {
+        reportData = response.report;
+      } else if (response?.data?.report) {
+        reportData = response.data.report;
+      } else if (response && typeof response === 'object' && response._id) {
+        // Direct report object
+        reportData = response;
+      }
+      
+      if (!reportData) {
+        throw new Error('Report data not found in response');
+      }
+      
+      console.log('Admin setting report data:', reportData);
+      setSelectedReport(reportData);
+    } catch (error) {
+      console.error('Error fetching single report:', error);
+      alert(`Failed to load report details: ${error.message}`);
+      setShowReportModal(false);
+    }
+  };
+
+  // Handle modal close
+  const handleCloseModal = () => {
+    setShowReportModal(false);
+    setSelectedReport(null);
+  };
+
+  // Handle status update from modal
+  const handleStatusUpdate = async (reportId, status) => {
+    try {
+      console.log('Updating report status:', reportId, 'to', status);
+      await updateReportStatus(reportId, status);
+      
+      // Update the selected report state to reflect the change
+      if (selectedReport && selectedReport._id === reportId) {
+        setSelectedReport({ ...selectedReport, status });
+      }
+      
+      // Refresh all reports after status update
+      fetchAllData();
+      
+      alert(`Report status updated to "${status}" successfully!`);
+    } catch (error) {
+      console.error('Error updating report status:', error);
+      alert(`Failed to update report status: ${error.message}`);
     }
   };
 
@@ -99,6 +165,7 @@ export default function AdminPanelUI({ user, onLogout }) {
           allReports={allReports}
           loading={loading}
           onRefresh={fetchAllData}
+          onReportClick={handleReportClick}
         />;
       case "users":
         return <UsersPage 
@@ -111,6 +178,7 @@ export default function AdminPanelUI({ user, onLogout }) {
           reports={allReports}
           loading={loading}
           onRefresh={fetchAllData}
+          onReportClick={handleReportClick}
         />;
       case "settings":
         return <SettingsPage />;
@@ -119,7 +187,7 @@ export default function AdminPanelUI({ user, onLogout }) {
           <div>
             <Header searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
             <StatsCards stats={stats} />
-            <ReportsTable reports={filteredReports} onStatusUpdate={fetchAllData} />
+            <ReportsTable reports={filteredReports} onStatusUpdate={fetchAllData} onReportClick={handleReportClick} />
           </div>
         );
     }
@@ -141,6 +209,15 @@ export default function AdminPanelUI({ user, onLogout }) {
           {renderContent()}
         </div>
       </div>
+
+      {/* Single Report Modal */}
+      <SingleReportModal
+        report={selectedReport}
+        isOpen={showReportModal}
+        onClose={handleCloseModal}
+        isAdmin={true}
+        onStatusUpdate={handleStatusUpdate}
+      />
     </div>
   );
 }

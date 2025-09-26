@@ -121,7 +121,7 @@ const ReportActionMenu = ({ report, onStatusUpdate }) => {
   );
 };
 
-export default function AllReportsPage({ reports = [], loading = false, onRefresh }) {
+export default function AllReportsPage({ reports = [], loading = false, onRefresh, onReportClick }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
@@ -303,11 +303,14 @@ export default function AllReportsPage({ reports = [], loading = false, onRefres
                 </tr>
               ) : (
                 filteredReports.map((report) => (
-                  <tr key={report._id || report.id} className="hover:bg-gray-50/50 transition-colors">
+                  <tr 
+                    key={report._id || report.id} 
+                    className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+                    onClick={() => onReportClick && onReportClick(report._id || report.id)}
+                  >
                     <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
                       <div>
                         <p className="font-medium text-gray-900 text-sm sm:text-base">{report.title}</p>
-                        <p className="text-xs sm:text-sm text-gray-500">ID: #{report._id || report.id}</p>
                         <div className="md:hidden mt-1 text-xs text-gray-500">
                           {report.reporter?.username || report.reporter?.name || 'Unknown'} • {report.location}
                         </div>
@@ -333,7 +336,7 @@ export default function AllReportsPage({ reports = [], loading = false, onRefres
                       {report.status.replace("-", " ")}
                     </span>
                   </td>
-                  <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
+                  <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4" onClick={(e) => e.stopPropagation()}>
                     <ReportActionMenu report={report} onStatusUpdate={onRefresh} />
                   </td>
                 </tr>

@@ -45,7 +45,7 @@ const reportSchema = new Schema({
 
     image: {
         type: String,
-        default: "https://community.softr.io/uploads/db9110/original/2X/7/74e6e7e382d0ff5d7773ca9a87e6f6f8817a68a6.jpeg",
+        default: "https://png.pngtree.com/png-vector/20191004/ourmid/pngtree-alert-icon-isolated-on-abstract-background-png-image_1779868.jpg",
     }
 
 }, {timestamps: true});

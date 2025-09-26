@@ -18,6 +18,8 @@ import {
 import { createReport, getUserReports, getAllReports } from "../services/apiService";
 import Navbar from "../components/Navbar";
 import UserSidebar from "../components/user/UserSidebar";
+import SingleReportModal from "../components/SingleReportModal";
+import { getSingleReport } from "../services/apiService";
 
 const statusConfig = {
   "open": { color: "bg-red-100 text-red-800 border-red-200", icon: AlertCircle },
@@ -62,6 +64,10 @@ export default function UserDashboard({ user, onLogout }) {
   const [allReports, setAllReports] = useState([]);
   const [reportsLoading, setReportsLoading] = useState(false);
   const [allReportsLoading, setAllReportsLoading] = useState(false);
+
+  // Single report modal state
+  const [selectedReport, setSelectedReport] = useState(null);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   // Define fetchUserReports function first
   const fetchUserReports = useCallback(async () => {
@@ -163,6 +169,46 @@ export default function UserDashboard({ user, onLogout }) {
       onLogout();
     }
   }, [user, onLogout]);
+
+  // Handle report click to open modal
+  const handleReportClick = async (reportId) => {
+    try {
+      setShowReportModal(true);
+      
+      console.log('Clicking on report with ID:', reportId);
+      const response = await getSingleReport(reportId);
+      console.log('Single report response structure:', response);
+      console.log('Available keys in response:', Object.keys(response || {}));
+      
+      // Handle different possible response structures
+      let reportData = null;
+      if (response?.report) {
+        reportData = response.report;
+      } else if (response?.data?.report) {
+        reportData = response.data.report;
+      } else if (response && typeof response === 'object' && response._id) {
+        // Direct report object
+        reportData = response;
+      }
+      
+      if (!reportData) {
+        throw new Error('Report data not found in response');
+      }
+      
+      console.log('Setting report data:', reportData);
+      setSelectedReport(reportData);
+    } catch (error) {
+      console.error('Error fetching single report:', error);
+      alert(`Failed to load report details: ${error.message}`);
+      setShowReportModal(false);
+    }
+  };
+
+  // Handle modal close
+  const handleCloseModal = () => {
+    setShowReportModal(false);
+    setSelectedReport(null);
+  };
 
   const filteredReports = userReports.filter(report =>
     report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -322,7 +368,11 @@ export default function UserDashboard({ user, onLogout }) {
             {userReports.slice(0, 5).map((report) => {
               const StatusIcon = statusConfig[report.status]?.icon || AlertCircle;
               return (
-                <div key={report._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                <div 
+                  key={report._id} 
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+                  onClick={() => handleReportClick(report._id)}
+                >
                   <div className="flex items-center space-x-4 flex-1">
                     <StatusIcon className="w-6 h-6 text-gray-500 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
@@ -378,7 +428,11 @@ export default function UserDashboard({ user, onLogout }) {
             {allReports.slice(0, 10).map((report) => {
               const StatusIcon = statusConfig[report.status]?.icon || AlertCircle;
               return (
-                <div key={report._id} className="flex items-center justify-between p-4 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors">
+                <div 
+                  key={report._id} 
+                  className="flex items-center justify-between p-4 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors cursor-pointer"
+                  onClick={() => handleReportClick(report._id)}
+                >
                   <div className="flex items-center space-x-4 flex-1">
                     <StatusIcon className="w-6 h-6 text-gray-500 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
@@ -592,7 +646,11 @@ export default function UserDashboard({ user, onLogout }) {
             {filteredReports.map((report) => {
               const StatusIcon = statusConfig[report.status]?.icon || AlertCircle;
               return (
-                <div key={report._id} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+                <div 
+                  key={report._id} 
+                  className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => handleReportClick(report._id)}
+                >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
                     <div className="flex items-center space-x-3">
                       <StatusIcon className="w-6 h-6 text-gray-500" />
@@ -704,6 +762,17 @@ export default function UserDashboard({ user, onLogout }) {
           {renderContent()}
         </div>
       </div>
+
+      {/* Single Report Modal */}
+      <SingleReportModal
+        report={selectedReport}
+        isOpen={showReportModal}
+        onClose={handleCloseModal}
+        isAdmin={false}
+        onStatusUpdate={() => {
+          // User can't update status, but we keep the prop for consistency
+        }}
+      />
     </div>
   );
 }

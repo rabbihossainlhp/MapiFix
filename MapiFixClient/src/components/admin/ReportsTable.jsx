@@ -22,7 +22,7 @@ const priorityColor = (priority) => {
 };
 
 // Individual Report Row Component with Action Menu
-const ReportRow = ({ report, priorityColor, statusColor, onStatusUpdate }) => {
+const ReportRow = ({ report, priorityColor, statusColor, onStatusUpdate, onReportClick }) => {
   const [showActions, setShowActions] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const actionMenuRef = useRef(null);
@@ -83,13 +83,13 @@ const ReportRow = ({ report, priorityColor, statusColor, onStatusUpdate }) => {
   };
 
   return (
-    <tr className="hover:bg-gray-50/50 transition-colors">
+    <tr 
+      className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+      onClick={() => onReportClick && onReportClick(report._id || report.id)}
+    >
       <td className="px-3 sm:px-6 py-3 sm:py-4">
         <div>
           <p className="font-medium text-gray-900 text-sm sm:text-base">{report.title}</p>
-          <p className="text-xs sm:text-sm text-gray-500">
-            ID: #{report._id?.slice(-6) || report.id}
-          </p>
           <div className="md:hidden mt-1 text-xs text-gray-500">{report.location}</div>
         </div>
       </td>
@@ -111,10 +111,13 @@ const ReportRow = ({ report, priorityColor, statusColor, onStatusUpdate }) => {
         </span>
       </td>
       <td className="px-3 sm:px-6 py-3 sm:py-4 relative">
-        <div ref={actionMenuRef}>
+        <div ref={actionMenuRef} onClick={(e) => e.stopPropagation()}>
           <button 
             className="p-1 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            onClick={() => setShowActions(!showActions)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowActions(!showActions);
+            }}
           >
             <MoreVertical className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
           </button>
@@ -155,7 +158,7 @@ const ReportRow = ({ report, priorityColor, statusColor, onStatusUpdate }) => {
   );
 };
 
-export default function ReportsTable({ reports, onStatusUpdate }) {
+export default function ReportsTable({ reports, onStatusUpdate, onReportClick }) {
   const exportToCSV = () => {
     const csvContent = [
       // CSV Header
@@ -225,6 +228,7 @@ export default function ReportsTable({ reports, onStatusUpdate }) {
                 priorityColor={priorityColor}
                 statusColor={statusColor}
                 onStatusUpdate={onStatusUpdate}
+                onReportClick={onReportClick}
               />
             ))}
             {reports.length > 15 && (
