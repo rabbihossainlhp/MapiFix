@@ -104,6 +104,16 @@ class ApiService {
       throw new Error(error.response?.data?.message || 'Failed to fetch users');
     }
   }
+
+  // Update report status (for admin)
+  async updateReportStatus(reportId, status) {
+    try {
+      const response = await this.api.patch(`/report/${reportId}/status`, { status });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to update report status');
+    }
+  }
 }
 
 const apiService = new ApiService();
@@ -115,5 +125,6 @@ export const signup = (userData) => apiService.signup(userData);
 export const getUserReports = () => apiService.getUserReports();
 export const getAllReports = () => apiService.getAllReports();
 export const getAllUsers = () => apiService.getAllUsers();
+export const updateReportStatus = (reportId, status) => apiService.updateReportStatus(reportId, status);
 
 export default apiService;

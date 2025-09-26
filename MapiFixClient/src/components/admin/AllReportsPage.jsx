@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Search, Filter, Eye, Edit, Trash2, Download, MoreVertical } from "lucide-react";
 
 const statusColor = (status) => {
@@ -24,11 +24,20 @@ export default function AllReportsPage({ reports = [], loading = false, onRefres
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
 
+  // Debug: Log the actual structure of reports data
+  useEffect(() => {
+    if (reports.length > 0) {
+      console.log('AllReportsPage - Sample report structure:', reports[0]);
+      console.log('AllReportsPage - Reporter structure:', reports[0]?.reporter);
+    }
+  }, [reports]);
+
   const filteredReports = reports.filter(report => {
+    const reporterName = report.reporter?.username || report.reporter?.name || '';
     const matchesSearch = report.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          report.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         report.reporter?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         report.user?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+                         reporterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         report.reporter?.email?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || report.status === statusFilter;
     const matchesPriority = priorityFilter === "all" || report.priority === priorityFilter;
     return matchesSearch && matchesStatus && matchesPriority;
@@ -166,12 +175,12 @@ export default function AllReportsPage({ reports = [], loading = false, onRefres
                         <p className="font-medium text-gray-900 text-sm sm:text-base">{report.title}</p>
                         <p className="text-xs sm:text-sm text-gray-500">ID: #{report._id || report.id}</p>
                         <div className="md:hidden mt-1 text-xs text-gray-500">
-                          {report.reporter || report.user?.name} • {report.location}
+                          {report.reporter?.username || report.reporter?.name || 'Unknown'} • {report.location}
                         </div>
                       </div>
                     </td>
                     <td className="hidden md:table-cell px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
-                      <span className="text-gray-700 text-sm sm:text-base">{report.reporter || report.user?.name}</span>
+                      <span className="text-gray-700 text-sm sm:text-base">{report.reporter?.username || report.reporter?.name || 'Unknown'}</span>
                     </td>
                   <td className="hidden lg:table-cell px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
                     <span className="text-gray-700 text-sm sm:text-base">{report.location}</span>
@@ -182,7 +191,9 @@ export default function AllReportsPage({ reports = [], loading = false, onRefres
                       <span className="capitalize text-gray-700 text-sm sm:text-base">{report.priority}</span>
                     </div>
                   </td>
-                  <td className="hidden sm:table-cell px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-gray-600 text-sm sm:text-base">{report.date}</td>
+                  <td className="hidden sm:table-cell px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-gray-600 text-sm sm:text-base">
+                    {report.createdAt ? new Date(report.createdAt).toLocaleDateString() : (report.date || 'N/A')}
+                  </td>
                   <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
                     <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium border ${statusColor(report.status)}`}>
                       {report.status.replace("-", " ")}

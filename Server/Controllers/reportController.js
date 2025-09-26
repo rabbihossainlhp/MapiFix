@@ -24,6 +24,7 @@ exports.createReportController = async (req, res, next) => {
         })
 
         await newReport.save();
+        await User.findByIdAndUpdate(req.user._id, {$push: {reports: newReport._id}});
 
         return res.status(201).json({
             message: "Report created successfully",
@@ -45,7 +46,10 @@ exports.createReportController = async (req, res, next) => {
 
 exports.getUserReportsController = async (req, res, next) => {
     try{
-        const reports = await Report.find({reporter: req.user._id}).populate('reporter', 'name email');
+        const reports = await Report.find({reporter: req.user._id})
+        .populate('reporter', 'name email')
+        .sort({createdAt: -1});
+
         return res.status(200).json({
             message: "User reports fetched successfully",
             reports
@@ -64,7 +68,9 @@ exports.getUserReportsController = async (req, res, next) => {
 
 exports.getAllReportsController = async (req, res, next) => {
     try{
-        const reports = await Report.find().populate('reporter', 'username email');
+        const reports = await Report.find()
+            .populate('reporter', 'username email')
+            .sort({createdAt: -1});
         return res.status(200).json({
             message: "All reports fetched successfully",
             reports
@@ -79,3 +85,40 @@ exports.getAllReportsController = async (req, res, next) => {
     }
 
 }   
+
+
+
+exports.updateReportStatusController = async (req, res, next) => {
+    const {reportId} = req.params;
+    const {status} = req.body;
+
+    try{
+        if(!status){
+            return res.status(400).json({
+                message: "Status is required"
+            });
+        }
+
+        const report = await Report.findById(reportId);
+        if(!report){
+            return res.status(404).json({
+                message: "Report not found"
+            });
+        }
+
+        report.status = status;
+        await report.save();
+
+        return res.status(200).json({
+            message: "Report status updated successfully",
+            report
+        });
+
+        
+    }catch(err){
+        return res.status(500).json({
+            message: "Server Error",
+            error: err.message
+        });
+    }
+}

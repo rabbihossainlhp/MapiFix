@@ -6,7 +6,8 @@ export default function UsersPage({ users = [], loading = false, onRefresh }) {
   const [selectedRole, setSelectedRole] = useState("all");
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const userName = user.username || user.name || '';
+    const matchesSearch = userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.department?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = selectedRole === "all" || user.role === selectedRole;
@@ -124,11 +125,11 @@ export default function UsersPage({ users = [], loading = false, onRefresh }) {
                     <div className="flex items-center space-x-2 sm:space-x-3">
                       <div className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
                         <span className="text-white font-semibold text-xs sm:text-sm">
-                          {user.name.split(' ').map(n => n[0]).join('')}
+                          {(user.username || user.name || 'U').substring(0, 2).toUpperCase()}
                         </span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="font-medium text-gray-900 text-xs sm:text-sm lg:text-base truncate">{user.name}</div>
+                        <div className="font-medium text-gray-900 text-xs sm:text-sm lg:text-base truncate">{user.username || user.name || 'Unknown'}</div>
                         <div className="text-xs text-gray-500 truncate">{user.email}</div>
                         <div className="md:hidden text-xs text-gray-500 mt-0.5">{user.department}</div>
                       </div>
@@ -144,14 +145,14 @@ export default function UsersPage({ users = [], loading = false, onRefresh }) {
                       {user.role}
                     </span>
                   </td>
-                  <td className="hidden sm:table-cell px-2 sm:px-3 lg:px-6 py-2 sm:py-3 lg:py-4 text-xs sm:text-sm text-gray-700">{user.reports}</td>
+                  <td className="hidden sm:table-cell px-2 sm:px-3 lg:px-6 py-2 sm:py-3 lg:py-4 text-xs sm:text-sm text-gray-700">{user.reports?.length || 0}</td>
                   <td className="px-2 sm:px-3 lg:px-6 py-2 sm:py-3 lg:py-4">
                     <span className={`inline-flex px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-medium rounded-full ${
-                      user.status === 'active' 
+                      (user.status === 'active' || !user.status)
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-red-100 text-red-800'
                     }`}>
-                      {user.status}
+                      {user.status || 'active'}
                     </span>
                   </td>
                   <td className="px-2 sm:px-3 lg:px-6 py-2 sm:py-3 lg:py-4">

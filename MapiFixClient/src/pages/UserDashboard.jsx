@@ -242,7 +242,7 @@ export default function UserDashboard({ user, onLogout }) {
   const renderDashboardContent = () => (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Dashboard</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Home</h1>
         <p className="text-gray-600">Welcome back, {user?.name || 'User'}!</p>
       </div>
       
@@ -262,17 +262,19 @@ export default function UserDashboard({ user, onLogout }) {
         </div>
       </div>
 
-      {/* Recent Reports */}
+      {/* All Reports Section */}
       <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-gray-800">Recent Reports</h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-gray-800">All Your Reports</h2>
           <button
-            onClick={() => setActiveTab("reports")}
-            className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors"
+            onClick={() => setActiveTab("new-report")}
+            className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
           >
-            View All →
+            <Plus className="w-4 h-4" />
+            <span>New Report</span>
           </button>
         </div>
+        
         {reportsLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader className="w-6 h-6 animate-spin text-blue-600" />
@@ -280,22 +282,40 @@ export default function UserDashboard({ user, onLogout }) {
           </div>
         ) : (
           <div className="space-y-4">
-            {userReports.slice(0, 3).map((report) => {
+            {userReports.map((report) => {
               const StatusIcon = statusConfig[report.status]?.icon || AlertCircle;
               return (
-                <div key={report._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                  <div className="flex items-center space-x-4">
-                    <StatusIcon className="w-6 h-6 text-gray-500" />
-                    <div>
-                      <h3 className="font-medium text-gray-900">{report.title}</h3>
-                      <p className="text-sm text-gray-600">
-                        {report.location} • {new Date(report.createdAt).toLocaleDateString()}
+                <div key={report._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                  <div className="flex items-center space-x-4 flex-1">
+                    <StatusIcon className="w-6 h-6 text-gray-500 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-gray-900 truncate">{report.title}</h3>
+                      <p className="text-sm text-gray-600 truncate">
+                        {report.location}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Created: {new Date(report.createdAt).toLocaleDateString()} • 
+                        Priority: <span className="capitalize">{report.priority}</span>
                       </p>
                     </div>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium border ${statusConfig[report.status]?.color || 'bg-gray-100 text-gray-800'}`}>
-                    {report.status.replace("-", " ")}
-                  </span>
+                  <div className="flex items-center space-x-3">
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium border whitespace-nowrap ${statusConfig[report.status]?.color || 'bg-gray-100 text-gray-800'}`}>
+                      {report.status.replace("-", " ")}
+                    </span>
+                    <div className="relative">
+                      <button 
+                        className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // TODO: Implement action menu
+                          console.log('Action menu for report:', report._id);
+                        }}
+                      >
+                        <Settings className="w-4 h-4 text-gray-400" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               );
             })}
