@@ -25,14 +25,25 @@ app.use(express.urlencoded({extended: true}));
 
 //handle routing
 app.get('/', (req, res) => {
-    res.send('Welcome to the MapiFix API');
+    res.json({
+        message: 'MapiFix API is running successfully!',
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development'
+    });
 });
 
-app.use((req, res) => {
-    res.status(404).json({message: "Route not found",path: req.originalUrl});
-});
-
+// Set up routes FIRST
 useRoutes(app);
+
+// 404 handler comes LAST
+app.use((req, res) => {
+    res.status(404).json({
+        message: "Route not found",
+        path: req.originalUrl,
+        method: req.method
+    });
+});
 
 
 const Port = process.env.PORT || 5000;
