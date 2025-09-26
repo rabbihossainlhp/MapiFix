@@ -15,13 +15,14 @@ import {
   X,
   Loader
 } from "lucide-react";
-import { createReport, getUserReports } from "../services/apiService";
+import { createReport, getUserReports, getAllReports } from "../services/apiService";
 import Navbar from "../components/Navbar";
 import UserSidebar from "../components/user/UserSidebar";
 
 const statusConfig = {
   "open": { color: "bg-red-100 text-red-800 border-red-200", icon: AlertCircle },
-  "in-progress": { color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: Clock },
+  "in progress": { color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: Clock },
+  "in-progress": { color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: Clock }, // Keep both for backward compatibility
   "resolved": { color: "bg-green-100 text-green-800 border-green-200", icon: CheckCircle2 }
 };
 
@@ -58,7 +59,9 @@ export default function UserDashboard({ user, onLogout }) {
   
   // Real reports from backend
   const [userReports, setUserReports] = useState([]);
+  const [allReports, setAllReports] = useState([]);
   const [reportsLoading, setReportsLoading] = useState(false);
+  const [allReportsLoading, setAllReportsLoading] = useState(false);
 
   // Define fetchUserReports function first
   const fetchUserReports = useCallback(async () => {
@@ -121,10 +124,36 @@ export default function UserDashboard({ user, onLogout }) {
     }
   }, [user]);
 
-  // Fetch user reports on component mount
+  // Function to fetch all reports (from all users)
+  const fetchAllReports = useCallback(async () => {
+    setAllReportsLoading(true);
+    try {
+      console.log('Fetching all reports for user to see others...');
+      const response = await getAllReports();
+      
+      if (response.reports) {
+        // Filter out current user's reports to show only others' reports
+        const othersReports = response.reports.filter(report => 
+          report.reporter?._id !== user?._id && report.reporter?.username !== user?.username
+        );
+        
+        console.log('All reports fetched:', response.reports.length);
+        console.log('Others reports (excluding current user):', othersReports.length);
+        setAllReports(othersReports);
+      }
+    } catch (err) {
+      console.error('Failed to fetch all reports:', err);
+      setAllReports([]);
+    } finally {
+      setAllReportsLoading(false);
+    }
+  }, [user]);
+
+  // Fetch user reports and all reports on component mount
   useEffect(() => {
     fetchUserReports();
-  }, [fetchUserReports]);
+    fetchAllReports();
+  }, [fetchUserReports, fetchAllReports]);
 
   // Simple token check - run only once on mount
   useEffect(() => {
@@ -253,7 +282,7 @@ export default function UserDashboard({ user, onLogout }) {
           <div className="text-gray-600">Total Reports</div>
         </div>
         <div className="bg-white/80 backdrop-blur-md rounded-xl p-6 shadow-lg">
-          <div className="text-3xl font-bold text-yellow-600 mb-2">{userReports.filter(r => r.status === "in-progress").length}</div>
+          <div className="text-3xl font-bold text-yellow-600 mb-2">{userReports.filter(r => r.status === "in progress" || r.status === "in-progress").length}</div>
           <div className="text-gray-600">In Progress</div>
         </div>
         <div className="bg-white/80 backdrop-blur-md rounded-xl p-6 shadow-lg">
@@ -262,17 +291,25 @@ export default function UserDashboard({ user, onLogout }) {
         </div>
       </div>
 
-      {/* All Reports Section */}
+      {/* Recent Reports Section (5 most recent) */}
       <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-800">All Your Reports</h2>
-          <button
-            onClick={() => setActiveTab("new-report")}
-            className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span>New Report</span>
-          </button>
+          <h2 className="text-xl font-bold text-gray-800">Your Recent Reports</h2>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setActiveTab("reports")}
+              className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors"
+            >
+              View All →
+            </button>
+            <button
+              onClick={() => setActiveTab("new-report")}
+              className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span>New Report</span>
+            </button>
+          </div>
         </div>
         
         {reportsLoading ? (
@@ -282,7 +319,7 @@ export default function UserDashboard({ user, onLogout }) {
           </div>
         ) : (
           <div className="space-y-4">
-            {userReports.map((report) => {
+            {userReports.slice(0, 5).map((report) => {
               const StatusIcon = statusConfig[report.status]?.icon || AlertCircle;
               return (
                 <div key={report._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
@@ -303,18 +340,6 @@ export default function UserDashboard({ user, onLogout }) {
                     <span className={`px-3 py-1 rounded-full text-sm font-medium border whitespace-nowrap ${statusConfig[report.status]?.color || 'bg-gray-100 text-gray-800'}`}>
                       {report.status.replace("-", " ")}
                     </span>
-                    <div className="relative">
-                      <button 
-                        className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // TODO: Implement action menu
-                          console.log('Action menu for report:', report._id);
-                        }}
-                      >
-                        <Settings className="w-4 h-4 text-gray-400" />
-                      </button>
-                    </div>
                   </div>
                 </div>
               );
@@ -332,6 +357,61 @@ export default function UserDashboard({ user, onLogout }) {
               <Plus className="w-4 h-4" />
               <span>Submit Your First Report</span>
             </button>
+          </div>
+        )}
+      </div>
+
+      {/* Other People's Recent Reports Section */}
+      <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-gray-800">Recent Reports from Others</h2>
+          <p className="text-sm text-gray-500">See what others have reported recently</p>
+        </div>
+        
+        {allReportsLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader className="w-6 h-6 animate-spin text-blue-600" />
+            <span className="ml-2 text-gray-600">Loading community reports...</span>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {allReports.slice(0, 10).map((report) => {
+              const StatusIcon = statusConfig[report.status]?.icon || AlertCircle;
+              return (
+                <div key={report._id} className="flex items-center justify-between p-4 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors">
+                  <div className="flex items-center space-x-4 flex-1">
+                    <StatusIcon className="w-6 h-6 text-gray-500 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-gray-900 truncate">{report.title}</h3>
+                      <p className="text-sm text-gray-600 truncate">
+                        {report.location} • By: {report.reporter?.username || 'Anonymous'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Created: {new Date(report.createdAt).toLocaleDateString()} • 
+                        Priority: <span className="capitalize">{report.priority}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium border whitespace-nowrap ${statusConfig[report.status]?.color || 'bg-gray-100 text-gray-800'}`}>
+                      {report.status.replace("-", " ")}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        
+        {allReports.length === 0 && !allReportsLoading && (
+          <div className="text-center py-8">
+            <p className="text-gray-500">No other reports available</p>
+          </div>
+        )}
+        
+        {allReports.length > 10 && (
+          <div className="text-center mt-4 pt-4 border-t border-gray-200">
+            <p className="text-sm text-gray-500">Showing 10 of {allReports.length} community reports</p>
           </div>
         )}
       </div>

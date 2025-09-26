@@ -108,7 +108,7 @@ class ApiService {
   // Update report status (for admin)
   async updateReportStatus(reportId, status) {
     try {
-      const response = await this.api.patch(`/report/${reportId}/status`, { status });
+      const response = await this.api.post(`/report/updatestatus/${reportId}`, { status });
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Failed to update report status');

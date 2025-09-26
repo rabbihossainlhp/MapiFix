@@ -5,7 +5,8 @@ import { updateReportStatus } from "../../services/apiService";
 const statusColor = (status) => {
   const colors = {
     "open": "bg-red-100 text-red-800 border-red-200",
-    "in-progress": "bg-yellow-100 text-yellow-800 border-yellow-200",
+    "in progress": "bg-yellow-100 text-yellow-800 border-yellow-200",
+    "in-progress": "bg-yellow-100 text-yellow-800 border-yellow-200", // Keep both for backward compatibility
     "resolved": "bg-green-100 text-green-800 border-green-200"
   };
   return colors[status] || "bg-gray-100 text-gray-800";
@@ -21,8 +22,9 @@ const priorityColor = (priority) => {
 };
 
 // Individual Report Row Component with Action Menu
-const ReportRow = ({ report, priorityColor, statusColor }) => {
+const ReportRow = ({ report, priorityColor, statusColor, onStatusUpdate }) => {
   const [showActions, setShowActions] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const actionMenuRef = useRef(null);
 
   useEffect(() => {
@@ -54,20 +56,28 @@ const ReportRow = ({ report, priorityColor, statusColor }) => {
   };
 
   const handleStatusChange = async (newStatus) => {
+    setIsUpdating(true);
     try {
       console.log(`Changing status of report ${report._id || report.id} to ${newStatus}`);
       
-      // Call API to update status (requires backend endpoint)
-      await updateReportStatus(report._id || report.id, newStatus);
+      // Call API to update status
+      const response = await updateReportStatus(report._id || report.id, newStatus);
+      console.log('Status updated successfully:', response);
       
-      // TODO: Trigger parent component to refresh the reports list
-      // You might want to pass a callback prop from parent to refresh data
-      console.log('Status updated successfully');
+      // Show success message
+      console.log(`✅ Report status changed to "${newStatus}" successfully!`);
+      
+      // Trigger parent component to refresh the reports list immediately
+      if (onStatusUpdate) {
+        console.log('🔄 Refreshing reports data...');
+        await onStatusUpdate();
+      }
       
     } catch (error) {
       console.error('Failed to update report status:', error);
-      // TODO: Show error notification to user
+      alert(`❌ Failed to update status: ${error.message}`);
     } finally {
+      setIsUpdating(false);
       setShowActions(false);
     }
   };
@@ -113,25 +123,28 @@ const ReportRow = ({ report, priorityColor, statusColor }) => {
             <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
               <div className="py-1">
                 <button
-                  onClick={() => handleStatusChange('in-progress')}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+                  onClick={() => handleStatusChange('in progress')}
+                  disabled={isUpdating}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Clock className="w-4 h-4 text-yellow-500" />
-                  <span>Mark In Progress</span>
+                  <span>{isUpdating ? 'Updating...' : 'Mark In Progress'}</span>
                 </button>
                 <button
                   onClick={() => handleStatusChange('resolved')}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+                  disabled={isUpdating}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  <span>Mark Resolved</span>
+                  <span>{isUpdating ? 'Updating...' : 'Mark Resolved'}</span>
                 </button>
                 <button
                   onClick={() => handleStatusChange('open')}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+                  disabled={isUpdating}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <AlertTriangle className="w-4 h-4 text-red-500" />
-                  <span>Mark Open</span>
+                  <span>{isUpdating ? 'Updating...' : 'Mark Open'}</span>
                 </button>
               </div>
             </div>
@@ -142,7 +155,35 @@ const ReportRow = ({ report, priorityColor, statusColor }) => {
   );
 };
 
-export default function ReportsTable({ reports }) {
+export default function ReportsTable({ reports, onStatusUpdate }) {
+  const exportToCSV = () => {
+    const csvContent = [
+      // CSV Header
+      ['ID', 'Title', 'Location', 'Priority', 'Status', 'Reporter', 'Date', 'Description'].join(','),
+      // CSV Rows
+      ...reports.slice(0, 15).map(report => [
+        report._id?.slice(-6) || report.id,
+        `"${report.title || ''}"`,
+        `"${report.location || ''}"`,
+        report.priority || '',
+        report.status || '',
+        `"${report.reporter?.username || report.reporter?.name || 'Unknown'}"`,
+        new Date(report.createdAt || report.date).toLocaleDateString(),
+        `"${(report.description || '').replace(/"/g, '""')}"` // Escape quotes
+      ].join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `reports_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
   return (
     <div className="bg-white/80 backdrop-blur-md rounded-xl sm:rounded-2xl shadow-xl overflow-hidden">
       <div className="p-4 sm:p-6 border-b border-gray-200">
@@ -153,9 +194,12 @@ export default function ReportsTable({ reports }) {
               <Filter className="w-4 h-4" />
               <span>Filter</span>
             </button>
-            <button className="flex items-center justify-center sm:justify-start space-x-2 px-3 sm:px-4 py-2 border border-gray-200 rounded-lg sm:rounded-xl hover:bg-gray-50 transition-colors text-sm sm:text-base">
+            <button 
+              onClick={exportToCSV}
+              className="flex items-center justify-center sm:justify-start space-x-2 px-3 sm:px-4 py-2 border border-gray-200 rounded-lg sm:rounded-xl hover:bg-gray-50 transition-colors text-sm sm:text-base"
+            >
               <Download className="w-4 h-4" />
-              <span>Export</span>
+              <span>Export CSV</span>
             </button>
           </div>
         </div>
@@ -174,14 +218,22 @@ export default function ReportsTable({ reports }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {reports.map((report, index) => (
+            {reports.slice(0, 15).map((report, index) => (
               <ReportRow 
                 key={report._id || report.id || `report-${index}`} 
                 report={report} 
                 priorityColor={priorityColor}
                 statusColor={statusColor}
+                onStatusUpdate={onStatusUpdate}
               />
             ))}
+            {reports.length > 15 && (
+              <tr>
+                <td colSpan="6" className="px-6 py-4 text-center text-gray-500 bg-gray-50">
+                  Showing 15 of {reports.length} reports. <a href="#" className="text-blue-600 hover:text-blue-700">View all reports →</a>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

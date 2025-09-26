@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from "react";
-import { Search, Filter, Eye, Edit, Trash2, Download, MoreVertical } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Search, Filter, Eye, Edit, Trash2, Download, MoreVertical, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
+import { updateReportStatus } from "../../services/apiService";
 
 const statusColor = (status) => {
   const colors = {
     "open": "bg-red-100 text-red-800 border-red-200",
-    "in-progress": "bg-yellow-100 text-yellow-800 border-yellow-200",
+    "in progress": "bg-yellow-100 text-yellow-800 border-yellow-200",
+    "in-progress": "bg-yellow-100 text-yellow-800 border-yellow-200", // Keep both for backward compatibility
     "resolved": "bg-green-100 text-green-800 border-green-200"
   };
   return colors[status] || "bg-gray-100 text-gray-800";
@@ -19,10 +21,139 @@ const priorityColor = (priority) => {
   return colors[priority] || "bg-gray-500";
 };
 
+// Report Action Menu Component
+const ReportActionMenu = ({ report, onStatusUpdate }) => {
+  const [showActions, setShowActions] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const actionMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (actionMenuRef.current && !actionMenuRef.current.contains(event.target)) {
+        setShowActions(false);
+      }
+    };
+
+    if (showActions) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showActions]);
+
+  const handleStatusChange = async (newStatus) => {
+    setIsUpdating(true);
+    try {
+      console.log(`Changing status of report ${report._id} to ${newStatus}`);
+      
+      // Call API to update status
+      const response = await updateReportStatus(report._id, newStatus);
+      console.log('Status updated successfully:', response);
+      
+      // Show success message
+      console.log(`✅ Report status changed to "${newStatus}" successfully!`);
+      
+      // Trigger parent component to refresh the reports list immediately
+      if (onStatusUpdate) {
+        console.log('🔄 Refreshing reports data...');
+        await onStatusUpdate();
+      }
+      
+    } catch (error) {
+      console.error('Failed to update report status:', error);
+      alert(`❌ Failed to update status: ${error.message}`);
+    } finally {
+      setIsUpdating(false);
+      setShowActions(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center space-x-1 sm:space-x-2">
+      <button className="p-1 hover:bg-gray-100 rounded transition-colors">
+        <Eye className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
+      </button>
+      <button className="p-1 hover:bg-gray-100 rounded transition-colors">
+        <Edit className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400" />
+      </button>
+      <div className="relative" ref={actionMenuRef}>
+        <button 
+          className="p-1 hover:bg-gray-100 rounded transition-colors"
+          onClick={() => setShowActions(!showActions)}
+        >
+          <MoreVertical className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
+        </button>
+        
+        {showActions && (
+          <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+            <div className="py-1">
+              <button
+                onClick={() => handleStatusChange('in progress')}
+                disabled={isUpdating}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Clock className="w-4 h-4 text-yellow-500" />
+                <span>{isUpdating ? 'Updating...' : 'Mark In Progress'}</span>
+              </button>
+              <button
+                onClick={() => handleStatusChange('resolved')}
+                disabled={isUpdating}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                <span>{isUpdating ? 'Updating...' : 'Mark Resolved'}</span>
+              </button>
+              <button
+                onClick={() => handleStatusChange('open')}
+                disabled={isUpdating}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <AlertTriangle className="w-4 h-4 text-red-500" />
+                <span>{isUpdating ? 'Updating...' : 'Mark Open'}</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export default function AllReportsPage({ reports = [], loading = false, onRefresh }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
+
+  const exportToCSV = () => {
+    const csvContent = [
+      // CSV Header
+      ['ID', 'Title', 'Location', 'Priority', 'Status', 'Reporter', 'Date', 'Description'].join(','),
+      // CSV Rows
+      ...filteredReports.map(report => [
+        report._id?.slice(-6) || report.id,
+        `"${report.title || ''}"`,
+        `"${report.location || ''}"`,
+        report.priority || '',
+        report.status || '',
+        `"${report.reporter?.username || report.reporter?.name || 'Unknown'}"`,
+        report.createdAt ? new Date(report.createdAt).toLocaleDateString() : (report.date || 'N/A'),
+        `"${(report.description || '').replace(/"/g, '""')}"` // Escape quotes
+      ].join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `all_reports_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   // Debug: Log the actual structure of reports data
   useEffect(() => {
@@ -46,7 +177,7 @@ export default function AllReportsPage({ reports = [], loading = false, onRefres
   const stats = {
     total: reports.length,
     open: reports.filter(r => r.status === "open").length,
-    inProgress: reports.filter(r => r.status === "in-progress").length,
+    inProgress: reports.filter(r => r.status === "in progress" || r.status === "in-progress").length,
     resolved: reports.filter(r => r.status === "resolved").length,
   };
 
@@ -118,7 +249,7 @@ export default function AllReportsPage({ reports = [], loading = false, onRefres
             >
               <option value="all">All Status</option>
               <option value="open">Open</option>
-              <option value="in-progress">In Progress</option>
+              <option value="in progress">In Progress</option>
               <option value="resolved">Resolved</option>
             </select>
             <select
@@ -138,9 +269,12 @@ export default function AllReportsPage({ reports = [], loading = false, onRefres
             <Filter className="w-4 h-4" />
             <span>More Filters</span>
           </button>
-          <button className="flex items-center space-x-2 px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors flex-1 lg:flex-none justify-center">
+          <button 
+            onClick={exportToCSV}
+            className="flex items-center space-x-2 px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors flex-1 lg:flex-none justify-center"
+          >
             <Download className="w-4 h-4" />
-            <span>Export</span>
+            <span>Export CSV</span>
           </button>
         </div>
       </div>
@@ -200,17 +334,7 @@ export default function AllReportsPage({ reports = [], loading = false, onRefres
                     </span>
                   </td>
                   <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
-                    <div className="flex items-center space-x-1 sm:space-x-2">
-                      <button className="p-1 hover:bg-gray-100 rounded transition-colors">
-                        <Eye className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
-                      </button>
-                      <button className="p-1 hover:bg-gray-100 rounded transition-colors">
-                        <Edit className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400" />
-                      </button>
-                      <button className="p-1 hover:bg-gray-100 rounded transition-colors">
-                        <MoreVertical className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
-                      </button>
-                    </div>
+                    <ReportActionMenu report={report} onStatusUpdate={onRefresh} />
                   </td>
                 </tr>
                 ))

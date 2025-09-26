@@ -58,7 +58,7 @@ export default function AdminPanelUI({ user, onLogout }) {
 
   const stats = {
     open: allReports.filter(r => r.status === "open").length,
-    inProgress: allReports.filter(r => r.status === "in-progress").length,
+    inProgress: allReports.filter(r => r.status === "in progress" || r.status === "in-progress").length,
     resolved: allReports.filter(r => r.status === "resolved").length,
     total: allReports.length,
     totalUsers: allUsers.length
@@ -119,7 +119,7 @@ export default function AdminPanelUI({ user, onLogout }) {
           <div>
             <Header searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
             <StatsCards stats={stats} />
-            <ReportsTable reports={filteredReports} />
+            <ReportsTable reports={filteredReports} onStatusUpdate={fetchAllData} />
           </div>
         );
     }
