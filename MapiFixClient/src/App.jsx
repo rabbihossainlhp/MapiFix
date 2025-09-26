@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Homepage from "./pages/Homepage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
@@ -57,14 +57,14 @@ function App() {
     setCurrentView("user-dashboard");
   };
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     setUser(null);
     setCurrentView("home");
     // Clear all authentication data when logging out
     localStorage.removeItem('authToken');
     localStorage.removeItem('userData');
     console.log('Logged out and cleared authentication data');
-  };  const handleBackToHome = () => {
+  }, []);  const handleBackToHome = () => {
     setCurrentView("home");
   };
 

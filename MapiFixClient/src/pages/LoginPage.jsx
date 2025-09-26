@@ -60,7 +60,27 @@ export default function LoginPage({ onBack, onLogin, onSwitchToSignup }) {
       
       localStorage.setItem('userData', JSON.stringify(userData));
       
+      // Debug: Check if user ID matches token
+      console.log('Login - User ID from response:', response.user._id);
+      if (response.token) {
+        try {
+          const tokenPayload = JSON.parse(atob(response.token.split('.')[1]));
+          console.log('Login - User ID from token:', tokenPayload.userId);
+          console.log('Login - IDs match:', response.user._id === tokenPayload.userId);
+        } catch (e) {
+          console.error('Token decode error during login:', e);
+        }
+      }
+      
       setTimeout(() => {
+        // Clear any old tokens first
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userData');
+        
+        // Set fresh token
+        localStorage.setItem('authToken', response.token);
+        localStorage.setItem('userData', JSON.stringify(userData));
+        
         onLogin({
           email: formData.email,
           name: response.user.name || response.user.username,

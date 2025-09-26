@@ -11,9 +11,6 @@ import AllReportsPage from "./components/admin/AllReportsPage";
 import SettingsPage from "./components/admin/SettingsPage";
 
 export default function AdminPanelUI({ user, onLogout }) {
-  // Debug: Check if functions are imported correctly
-  console.log('getAllReports function:', typeof getAllReports);
-  console.log('getAllUsers function:', typeof getAllUsers);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [searchTerm, setSearchTerm] = useState("");
   
@@ -33,27 +30,20 @@ export default function AdminPanelUI({ user, onLogout }) {
     setError("");
     
     try {
-      console.log('Starting to fetch admin data...');
-      
       // Fetch both reports and users in parallel
       const [reportsResponse, usersResponse] = await Promise.all([
         getAllReports(),
         getAllUsers()
       ]);
       
-      console.log('Reports response:', reportsResponse);
-      console.log('Users response:', usersResponse);
+      console.log('Admin data loaded - Reports:', reportsResponse.reports?.length, 'Users:', usersResponse.users?.length);
       
       setAllReports(reportsResponse.reports || []);
       setAllUsers(usersResponse.users || []);
       setError("");
-      
-      console.log('Data successfully loaded');
     } catch (error) {
-      console.error('Error fetching admin data:', error);
-      console.error('Error details:', error.message);
+      console.error('Admin data fetch error:', error.message);
       setError(`Failed to load admin data: ${error.message}`);
-      // Keep empty arrays as fallback
       setAllReports([]);
       setAllUsers([]);
     } finally {

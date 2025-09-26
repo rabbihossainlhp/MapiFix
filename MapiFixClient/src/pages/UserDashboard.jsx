@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { 
   Plus, 
   Search, 
@@ -26,6 +26,23 @@ const statusConfig = {
 };
 
 export default function UserDashboard({ user, onLogout }) {
+  // Debug: Check user token
+  console.log('UserDashboard - Current user:', user);
+  
+  // Decode JWT token to see what's inside
+  const token = localStorage.getItem('authToken');
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      console.log('🔍 JWT Token Payload:', payload);
+      console.log('🔍 Token userId:', payload.userId);
+      console.log('🔍 User object _id:', user?._id);
+      console.log('🔍 IDs match:', payload.userId === user?._id);
+    } catch (e) {
+      console.error('Token decode error:', e);
+    }
+  }
+  
   const [activeTab, setActiveTab] = useState("dashboard");
   const [newReport, setNewReport] = useState({
     title: "",
@@ -43,24 +60,80 @@ export default function UserDashboard({ user, onLogout }) {
   const [userReports, setUserReports] = useState([]);
   const [reportsLoading, setReportsLoading] = useState(false);
 
-  // Fetch user reports on component mount
-  useEffect(() => {
-    fetchUserReports();
-  }, []);
-
-  const fetchUserReports = async () => {
+  // Define fetchUserReports function first
+  const fetchUserReports = useCallback(async () => {
     setReportsLoading(true);
+    console.log('Fetching user reports...');
+    console.log('Token before API call:', localStorage.getItem('authToken'));
+    
+    // Debug: Check what we're sending to backend
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        console.log('📤 Sending to backend - UserId in token:', payload.userId);
+        console.log('📤 Sending to backend - Role in token:', payload.role);
+      } catch (e) {
+        console.error('Token decode error:', e);
+      }
+    }
+    
     try {
       const response = await getUserReports();
+      console.log('getUserReports response:', response);
       setUserReports(response.reports || []);
     } catch (error) {
       console.error('Error fetching reports:', error);
+      console.error('Error details:', error.message);
+      console.error('Error response:', error.response?.data);
+      
+      // If authentication failed, the user might not exist in database
+      if (error.message.includes('Authentication failed') || error.message.includes('User not found')) {
+        const token = localStorage.getItem('authToken');
+        if (token) {
+          try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            console.error('🚨 AUTHENTICATION DEBUG:');
+            console.error('Frontend user object ID:', user?._id);
+            console.error('JWT token userId:', payload.userId);
+            console.error('JWT token role:', payload.role);
+            console.error('IDs match:', payload.userId === user?._id);
+            console.error('');
+            console.error('🔧 BACKEND CHECK NEEDED:');
+            console.error('1. Check if user exists in MongoDB with ID:', payload.userId);
+            console.error('2. Check if authMiddleware is looking in correct collection (User vs Admin)');
+            console.error('3. Check if User.findById() is working with this ID format');
+          } catch (e) {
+            console.error('Token decode error:', e);
+          }
+        }
+        
+        // Show detailed error instead of auto-logout
+        alert(`Authentication failed: User not found in database. Check console for details.`);
+        setUserReports([]); // Clear reports but don't logout
+        return;
+      }
+      
       // Keep empty array if fetch fails
       setUserReports([]);
     } finally {
       setReportsLoading(false);
     }
-  };
+  }, [user]);
+
+  // Fetch user reports on component mount
+  useEffect(() => {
+    fetchUserReports();
+  }, [fetchUserReports]);
+
+  // Simple token check - run only once on mount
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (!token && !user) {
+      console.log('No token or user found, redirecting to login...');
+      onLogout();
+    }
+  }, [user, onLogout]);
 
   const filteredReports = userReports.filter(report =>
     report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -69,6 +142,10 @@ export default function UserDashboard({ user, onLogout }) {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
+    
+    console.log('Creating report...');
+    console.log('Token before report creation:', localStorage.getItem('authToken'));
+    console.log('Current user:', user);
     
     if(!newReport.title || !newReport.description || !newReport.location) {
       setError('Please fill in all required fields');

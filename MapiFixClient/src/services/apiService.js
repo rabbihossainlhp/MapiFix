@@ -14,6 +14,10 @@ class ApiService {
         const token = localStorage.getItem('authToken');
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
+          console.log('Request interceptor - Adding Authorization header for:', config.url);
+          console.log('Request interceptor - Token preview:', token.substring(0, 50) + '...');
+        } else {
+          console.warn('Request interceptor - No token found in localStorage for:', config.url);
         }
         return config;
       },
@@ -37,11 +41,36 @@ class ApiService {
   // Reports - Based on your backend routes
   async createReport(formData) {
     try {
+      // Debug: Check token before making request
+      const token = localStorage.getItem('authToken');
+      console.log('CreateReport - Token exists:', !!token);
+      
+      // Decode token to check contents
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          console.log('CreateReport - Sending userId to backend:', payload.userId);
+          console.log('CreateReport - Sending role to backend:', payload.role);
+        } catch (e) {
+          console.error('CreateReport - Token decode error:', e);
+        }
+      }
+      
       // Remove Content-Type header to let browser set it automatically for multipart/form-data
       const response = await this.api.post('/report/create', formData);
       return { success: true, ...response.data };
     } catch (error) {
-      console.error('API Error:', error.response?.data || error.message);
+      console.error('CreateReport API Error:', error.response?.data);
+      console.error('CreateReport Error status:', error.response?.status);
+      console.error('CreateReport Error message from backend:', error.response?.data?.message);
+      
+      // If 401, show exact backend error
+      if (error.response?.status === 401) {
+        console.error('🚨 BACKEND AUTHENTICATION ERROR:');
+        console.error('Backend says:', error.response?.data?.message);
+        console.error('This means your authMiddleware is not finding the user in database');
+      }
+      
       const errorMessage = error.response?.data?.message || error.message || 'Failed to create report';
       return { success: false, message: errorMessage };
     }
